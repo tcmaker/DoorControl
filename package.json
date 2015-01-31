@@ -1,0 +1,21 @@
+{
+  "name": "doors",
+  "version": "0.0.1",
+  "description": "TCMaker door system backend, web interface and floor polish",
+  "author": {
+  	"name":"Scott Hill"
+   },
+  "contributors": [{
+    "name":"Jude Dornisch"
+    }],
+  "dependencies": {
+	 "socket.io": ">=1.0.0",
+    "express": ">=3.0.0",
+    "serialport": ">=1.4.10",
+    "sqlite3": ">=3.0.4"
+  },
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.3.x"
+  }
+}

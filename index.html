@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Door Control</title>
+    <style>
+        fieldset {
+            margin-bottom: 8pt;
+            padding: 8pt;
+            font-family: sans-serif;
+        }
+        legend {
+            padding: 0.2em;
+        }
+        button, input[type="button"] {
+            font-weight: bold;
+            padding: 6px;
+            width: 120px;
+            height: 30px;
+        }
+        div {
+            text-align: center;
+        }
+        #messages {
+            width: 100%;
+            height: 200px;
+        }
+    </style>
+<!--    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>-->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+        
+        socket.on('conmsg', function(text) {
+            document.getElementById('conmsg').value += text;
+        });
+        
+        function setDoorLock(door, state) {
+            cmd = "D" + door + state;
+            socket.emit('setDoorLock', cmd);
+        }
+        
+        function lockAllDoors() {
+            socket.emit('lockAllDoors');
+        }
+        
+        function addTag(tag, priority) {
+            socket.emit('addTag', tag, priority);
+        }            
+    </script>
+
+</head>
+<body>
+<form action="" method="get">
+    <fieldset>
+        <legend>Front door</legend>
+        <div>
+        <button onclick="setDoorLock(1, 'U')">Unlock</button>
+        <button onclick="setDoorLock(1, 'L')">Lock</button>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Side door</legend>
+        <div>
+        <button onclick="setDoorLock(2, 'U')">Unlock</button>
+        <button onclick="setDoorLock(2, 'L')">Lock</button>
+        </div>
+   </fieldset>
+    <fieldset>
+        <legend>Lock all doors</legend>
+        <div>
+        <button onclick="lockAllDoors()">Lock All Doors</button>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Controller messages</legend>
+        <textarea id="conmsg" readonly></textarea>
+    </fieldset>
+    <fieldset>
+        <legend>Add a tag</legend>
+        <div>
+        <input type="text" id="addtag" name="tag" size="35" value="" placeholder="Input tag number without leading zeroes">
+        <select id="priority" name="priority">
+            <option value="0">0</option>
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+        </select>
+        <input type="button" name="addtag" value="Add Tag" onclick="addTag(document.getElementById('addtag').value, document.getElementById('priority').value)">
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Set real-time clock</legend>
+        current time is: <span id="rtctime">rtctime</span><br /><br />
+        <div>
+        <input type="datetime-local" name="datetime" size="35">
+        <input type="button" name="ST" value="Set Time" onclick="setTime">
+        </div>
+    </fieldset>
+</form>	
+</body>
+</html>
