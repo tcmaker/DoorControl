@@ -21,6 +21,10 @@ var SerialPort  = serialport.SerialPort;
 var sqlite3 = require('sqlite3');    // remove '.verbose()' to deactivate debug messages 
 var db = new sqlite3.Database("/opt/doors/doors.sqlite"); // opens the database
 
+var lastStatusTime = "";  // time string from last status update
+var doorState1 = 1;       // state of each door:
+var doorState2 = 1;       // 1 == locked; 0 == open
+
 // send the index page if you get a request for / :
 //app.get('/', sendIndex);
 app.get('/', sendIndex);
@@ -73,6 +77,11 @@ io.on('connection', function(socket){
 			}
 		});
 	});
+
+	socket.on('getStatus', function() {
+		writeAuditData('socket message: getStatus');
+		sendToSerial("ST");
+	});
 });
 
 //
@@ -82,41 +91,50 @@ myPort.open(function (error) {
 	if (error) {
 		writeAuditData("ERR myPort: " + error);
 	} else {
-
 		// Event fires when CRLF-terminated data appears at the serial port
 		myPort.on('data', function (data) {
-		  // for debugging, you should see this in Terminal:
-		  writeAuditData("myPort: received " + data);
+			// for debugging, you should see this in Terminal:
+			writeAuditData("myPort: received " + data);
 
-		  // Strip apart the string retreived from the serial port
-		  var keypad = data.slice(0,2);  // R1 or R2
-		  var door = data.slice(1,2);    // 1 or 2, corresponding to the keypad
-		  var command = data.slice(2,3); // C == keypress; T == tag read
-		  var cmdvalue = data.slice(3);  // keypad input or derived tag number
+			// Check the string for its message type:
+			var messageType = data.slice(0,2);
 
-		  //writeAuditData("keypad=" + keypad + " command=" + command + " cmdvalue=" + cmdvalue);
+			if (messageType == "ST") {
+			  	parseStatus(data);
+			  	io.sockets.emit('doorState1', doorState1);
+			  	io.sockets.emit('doorState2', doorState2);
+			  	io.sockets.emit('lastStatusTime', lastStatusTime);
+			}
 
-		  // Tag read handler
-		  // Query the DB for the tag. If no result, send 'DxT0'
-		  // If found, send 'DxTy', where x == door number, y == priority value from DB
-		  if (command == "T") {
-		  	db.get("SELECT priority FROM tags WHERE tagnumber = ?;", cmdvalue, function (err, row){
-		  		if (typeof row == "undefined") {
-		  			writeAuditData("ERR NO_TAG: " + cmdvalue);
-		  			sendToSerial("D" + door + "P0");
-		  		} else {
-		  			writeAuditData("Found tag: " + cmdvalue);
-		  			sendToSerial("D" + door + "P" + row.priority);
-					db.run("INSERT INTO activity (tagnumber) VALUES (?);", cmdvalue, function(err){
-						if (err == null){
-							return;
-						} else {
-							writeAuditData("ERR sqlite: " + err);
-						}
-					});
-		  		}
-		  	});
-		  }
+			if (messageType.match(/^R/gi)) {
+			  	// Strip apart the string retreived from the serial port
+			  	var keypad = data.slice(0,2);  // R1 or R2
+			  	var door = data.slice(1,2);    // 1 or 2, corresponding to the keypad
+			  	var command = data.slice(2,3); // C == keypress; T == tag read
+			  	var cmdvalue = data.slice(3);  // keypad input or derived tag number
+			
+			  	// Tag read handler
+			  	// Query the DB for the tag. If no result, send 'DxT0'
+			  	// If found, send 'DxTy', where x == door number, y == priority value from DB
+			  	if (command == "T") {
+			  		db.get("SELECT priority FROM tags WHERE tagnumber = ?;", cmdvalue, function (err, row){
+			  			if (typeof row == "undefined") {
+			  				writeAuditData("ERR NO_TAG: " + cmdvalue);
+			  				sendToSerial("D" + door + "P0");
+			  			} else {
+			  				writeAuditData("Found tag: " + cmdvalue);
+			  				sendToSerial("D" + door + "P" + row.priority);
+							db.run("INSERT INTO activity (tagnumber) VALUES (?);", cmdvalue, function(err){
+								if (err == null){
+									return;
+								} else {
+									writeAuditData("ERR sqlite: " + err);
+								}
+							});
+			  			}
+			  		});
+			  	}
+			}
 		  // send a serial event to the web client with the data:
 		  //socket.send('message',data);	
 		});
@@ -130,9 +148,13 @@ db.on('trace', function (sqlstring) {
 
 function sendToSerial(data) {
   writeAuditData("sendToSerial: " + data);
-
-  // send it out the serial port:
   myPort.write(data + "\r\n");
+}
+
+function parseStatus(data) {
+	doorState1 == data.slice(2,2);
+	doorState2 == data.slice(3,3);
+	lastStatusTime == data.slice(5);
 }
 
 function writeAuditData(text) {
