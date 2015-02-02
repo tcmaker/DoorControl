@@ -21,9 +21,11 @@ var SerialPort  = serialport.SerialPort;
 var sqlite3 = require('sqlite3');    // remove '.verbose()' to deactivate debug messages 
 var db = new sqlite3.Database("/opt/doors/doors.sqlite"); // opens the database
 
-var lastStatusTime = "";  // time string from last status update
-var doorState1 = 1;       // state of each door:
-var doorState2 = 1;       // 1 == locked; 0 == open
+global.lastStatusTime = "";  // time string from last status update
+global.doorState1 = 1;       // state of each door:
+global.doorState2 = 1;       // 1 == locked; 0 == open
+
+app.use("/", express.static(__dirname));
 
 // send the index page if you get a request for / :
 //app.get('/', sendIndex);
@@ -101,9 +103,10 @@ myPort.open(function (error) {
 
 			if (messageType == "ST") {
 			  	parseStatus(data);
-			  	io.sockets.emit('doorState1', doorState1);
-			  	io.sockets.emit('doorState2', doorState2);
-			  	io.sockets.emit('lastStatusTime', lastStatusTime);
+			  	io.sockets.emit('doorState1', global.doorState1);
+			  	io.sockets.emit('doorState2', global.doorState2);
+			  	io.sockets.emit('lastStatusTime', global.lastStatusTime);
+			  	//console.log(global.doorState1 + ' ' + global.doorState2 + ' ' + global.lastStatusTime);
 			}
 
 			if (messageType.match(/^R/gi)) {
@@ -152,9 +155,10 @@ function sendToSerial(data) {
 }
 
 function parseStatus(data) {
-	doorState1 == data.slice(2,2);
-	doorState2 == data.slice(3,3);
-	lastStatusTime == data.slice(5);
+	//console.log('parseStatus: ' + data);
+	global.doorState1 = data.slice(2,3);
+	global.doorState2 = data.slice(3,4);
+	global.lastStatusTime = data.slice(5);
 }
 
 function writeAuditData(text) {

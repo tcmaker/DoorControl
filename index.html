@@ -34,7 +34,27 @@
         socket.on('conmsg', function(text) {
             document.getElementById('conmsg').value += text;
         });
-        
+
+        socket.on('doorState1', function(text) {
+            if (text == '1') {
+                document.getElementById('door1').src="indicator-red.gif";
+            } else {
+                document.getElementById('door1').src="indicator-green.gif";
+            }
+        });
+
+        socket.on('doorState2', function(text) {
+            if (text == '1') {
+                document.getElementById('door2').src="indicator-red.gif";
+            } else {
+                document.getElementById('door2').src="indicator-green.gif";
+            }
+        });
+
+        socket.on('lastStatusTime', function(text) {
+            document.getElementById('statusTime').textContent=text;
+        });
+
         function setDoorLock(door, state) {
             cmd = "D" + door + state;
             socket.emit('setDoorLock', cmd);
@@ -46,15 +66,24 @@
         
         function addTag(tag, priority) {
             socket.emit('addTag', tag, priority);
-        }            
+        }
+        
+        function getStatus() {
+            socket.emit('getStatus');
+        }
     </script>
 
 </head>
-<body>
+<body onload="getStatus()">
+    <fieldset>
+        <legend>Last status time</legend>
+        <span id='statusTime'>unknown</span>
+    </fieldset>
 <form action="" method="get">
     <fieldset>
         <legend>Front door</legend>
         <div>
+        <img id='door1' src="indicator-red.gif">
         <button onclick="setDoorLock(1, 'U')">Unlock</button>
         <button onclick="setDoorLock(1, 'L')">Lock</button>
         </div>
@@ -62,6 +91,7 @@
     <fieldset>
         <legend>Side door</legend>
         <div>
+        <img id='door2' src="indicator-red.gif">
         <button onclick="setDoorLock(2, 'U')">Unlock</button>
         <button onclick="setDoorLock(2, 'L')">Lock</button>
         </div>
